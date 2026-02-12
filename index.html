@@ -1,32 +1,584 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Box Breathing Exercise</title>
-    <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f4f4; text-align: center; }
-        h1 { color: #333; }
-        .container { max-width: 600px; margin: auto; padding: 20px; }
-        .button { padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .button:hover { opacity: 0.8; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Box Breathing</title>
+  <style>
+    :root{
+      --bg: #0f172a;            /* slate-900 */
+      --card: #111827cc;        /* gray-900 with alpha */
+      --text: #e5e7eb;          /* gray-200 */
+      --muted: #94a3b8;         /* slate-400 */
+      --accent: #60a5fa;        /* blue-400 */
+      --accent-2: #34d399;      /* emerald-400 */
+      --warn: #f59e0b;          /* amber-500 */
+      --good: #22c55e;          /* green-500 */
+      --bad: #ef4444;           /* red-500 */
+      --ring: #1f2937;          /* gray-800 */
+    }
+    .light {
+      --bg: #f8fafc;            /* slate-50 */
+      --card: #ffffffee;        /* white with alpha */
+      --text: #0f172a;          /* slate-900 */
+      --muted: #475569;         /* slate-600 */
+      --accent: #2563eb;        /* blue-600 */
+      --accent-2: #059669;      /* emerald-600 */
+      --ring: #e5e7eb;          /* gray-200 */
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(1200px 800px at 50% 20%, rgba(96,165,250,0.12), transparent 60%) , var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    .wrap {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 1rem;
+    }
+    header, footer {
+      padding: 0.75rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 980px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    header h1{
+      font-size: clamp(1.1rem, 2vw, 1.3rem);
+      margin: 0;
+      letter-spacing: 0.3px;
+      font-weight: 700;
+    }
+    .theme-toggle {
+      display: inline-flex; gap: .5rem; align-items: center;
+      background: var(--card); border: 1px solid var(--ring); border-radius: 10px; padding: .35rem .6rem;
+    }
+    .theme-toggle button, .icon-btn, .pill {
+      cursor: pointer;
+      background: transparent; color: var(--text);
+      border: 1px solid var(--ring); border-radius: 8px;
+      padding: .45rem .7rem; font-weight: 600;
+    }
+    .theme-toggle button[aria-pressed="true"]{
+      background: var(--accent); color: white; border-color: transparent;
+    }
+    main {
+      display: grid; place-items: center;
+      padding: 0 1rem 1.5rem;
+    }
+    .card {
+      width: min(980px, 100%);
+      background: var(--card);
+      border: 1px solid var(--ring);
+      border-radius: 16px;
+      padding: 1rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+      display: grid; gap: 1rem;
+    }
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 900px){
+      .grid { grid-template-columns: 1.2fr .8fr; }
+    }
+    .stage {
+      display: grid; place-items: center;
+      padding: .5rem;
+    }
+    .canvas {
+      width: min(420px, 80vw);
+      aspect-ratio: 1/1;
+      position: relative;
+      display: grid;
+      place-items: center;
+    }
+    .ring, .progress {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+    }
+    .ring {
+      border: 12px solid var(--ring);
+      opacity: .8;
+    }
+    .progress {
+      mask: radial-gradient(circle at 50% 50%, transparent 62%, black 63%);
+      background:
+        conic-gradient(var(--accent) 0deg, var(--accent) var(--deg), transparent var(--deg) 360deg);
+      transition: background .2s linear;
+    }
+    .center {
+      position: absolute;
+      width: 76%;
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      display: grid; place-items: center;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,.05), rgba(0,0,0,.08));
+      box-shadow: inset 0 0 0 1px var(--ring), 0 8px 24px rgba(0,0,0,.25);
+      /* animated breathing box */
+      transform: scale(var(--scale, 1));
+      transition: transform var(--phase-ms, 4000ms) ease-in-out;
+    }
+    .center .label {
+      text-align: center;
+      display: grid; gap: .25rem;
+    }
+    .phase {
+      font-size: clamp(1.4rem, 4vw, 2rem);
+      font-weight: 800;
+      letter-spacing: .5px;
+    }
+    .count {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      font-size: clamp(1rem, 3.2vw, 1.2rem);
+    }
+    .controls {
+      display: flex; flex-wrap: wrap;
+      gap: .5rem; justify-content: center;
+    }
+    .controls button, .controls select, .controls input[type="number"] {
+      background: transparent; color: var(--text);
+      border: 1px solid var(--ring); border-radius: 10px;
+      padding: .6rem .8rem; font-weight: 600;
+      min-width: 90px;
+    }
+    .controls .primary {
+      background: var(--accent); color: white; border-color: transparent;
+    }
+    .controls .warn { background: var(--warn); color: #111; border-color: transparent; }
+    .controls .muted { color: var(--muted); }
+    .stack { display: grid; gap: .5rem; }
+    fieldset {
+      border: 1px dashed var(--ring); border-radius: 12px;
+      padding: .75rem; margin: 0;
+    }
+    legend { padding: 0 .5rem; color: var(--muted); font-weight: 700; font-size: .95rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+    .row label { display: grid; gap: .25rem; font-size: .9rem; color: var(--muted); }
+    .row input[type="number"]{
+      padding: .55rem .65rem; border-radius: 8px; border: 1px solid var(--ring);
+      background: transparent; color: var(--text);
+    }
+    .switches { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .pill { display: inline-flex; align-items: center; gap: .5rem; }
+    .pill input { accent-color: var(--accent); width: 1rem; height: 1rem; }
+    .hint { color: var(--muted); font-size: .9rem; }
+    footer {
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--ring); padding: .05rem .3rem; border-radius: 4px; border: 1px solid rgba(255,255,255,.08); }
+    .sr-only {
+      position:absolute !important; height:1px; width:1px; overflow:hidden; clip:rect(1px, 1px, 1px, 1px);
+      white-space:nowrap; border:0; padding:0; margin:-1px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Box Breathing Exercise</h1>
-        <p>Follow the instructions below to perform a box breathing exercise:</p>
-        <p><strong>Inhale for 4 seconds</strong></p>
-        <p><strong>Hold for 4 seconds</strong></p>
-        <p><strong>Exhale for 4 seconds</strong></p>
-        <p><strong>Hold for 4 seconds</strong></p>
-        <button class="button" onclick="startBreathing()">Start Breathing Exercise</button>
+<div class="wrap">
+  <header>
+    <h1>Box Breathing</h1>
+    <div class="theme-toggle" role="group" aria-label="Theme">
+      <span class="hint" style="padding-left:.2rem">Theme</span>
+      <button id="themeDark" aria-pressed="true">Dark</button>
+      <button id="themeLight" aria-pressed="false">Light</button>
     </div>
-    <script>
-        function startBreathing() {
-            alert('Starting Box Breathing Exercise!');
-            // Implement the breathing exercise logic here
-        }
-    </script>
+  </header>
+
+  <main>
+    <section class="card">
+      <div class="grid">
+        <!-- Left: Breathing visual -->
+        <div class="stage" aria-live="polite">
+          <div class="canvas" aria-label="Breathing visual">
+            <div class="ring" aria-hidden="true"></div>
+            <div class="progress" style="--deg:0deg" aria-hidden="true"></div>
+            <div class="center" id="box" style="--scale:1; --phase-ms:4000ms">
+              <div class="label">
+                <div id="phase" class="phase">Ready</div>
+                <div id="counter" class="count">0.0s</div>
+              </div>
+            </div>
+          </div>
+          <div class="controls" style="margin-top: .75rem;">
+            <button id="start" class="primary">Start</button>
+            <button id="pause">Pause</button>
+            <button id="reset" class="warn">Reset</button>
+            <button id="fs" class="icon-btn" title="Fullscreen">Fullscreen</button>
+          </div>
+          <p class="hint" style="text-align:center;margin: .25rem 0 0;">
+            Keyboard: <span class="kbd">Space</span> Start/Pause •
+            <span class="kbd">R</span> Reset •
+            <span class="kbd">F</span> Fullscreen
+          </p>
+        </div>
+
+        <!-- Right: Settings -->
+        <div class="stack" role="form" aria-label="Settings">
+          <fieldset>
+            <legend>Timing (seconds)</legend>
+            <div class="row">
+              <label>Inhale
+                <input id="tInhale" type="number" min="1" max="20" step="0.5" value="4" />
+              </label>
+              <label>Hold (full)
+                <input id="tHold1" type="number" min="0" max="20" step="0.5" value="4" />
+              </label>
+              <label>Exhale
+                <input id="tExhale" type="number" min="1" max="20" step="0.5" value="4" />
+              </label>
+              <label>Hold (empty)
+                <input id="tHold2" type="number" min="0" max="20" step="0.5" value="4" />
+              </label>
+            </div>
+            <div class="row" style="margin-top:.5rem;">
+              <label>Preset
+                <select id="preset">
+                  <option value="4-4-4-4">Classic 4–4–4–4</option>
+                  <option value="5-5-5-5">Gentle 5–5–5–5</option>
+                  <option value="6-6-6-6">Slow 6–6–6–6</option>
+                  <option value="4-7-8-0">4–7–8 (sleep) *</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              <label>Session length (min)
+                <input id="minutes" type="number" min="1" max="60" step="1" value="5" />
+              </label>
+            </div>
+            <p class="hint">* 4–7–8 isn’t a box; included for convenience. Adjust as you prefer.</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>Guidance</legend>
+            <div class="switches">
+              <label class="pill"><input id="beep" type="checkbox" checked />Audio cue</label>
+              <label class="pill"><input id="haptics" type="checkbox" />Vibration</label>
+              <label class="pill"><input id="countdown" type="checkbox" checked />Show seconds</label>
+              <label class="pill"><input id="spoken" type="checkbox" />Spoken prompts</label>
+              <label class="pill"><input id="autoRestart" type="checkbox" />Loop session</label>
+            </div>
+            <p class="hint">Audio/Haptics occur at each phase transition. Spoken uses your browser’s speech engine.</p>
+          </fieldset>
+
+          <fieldset>
+            <legend>About box breathing</legend>
+            <p class="hint">
+              Box breathing cycles through four equal phases: <b>Inhale</b> → <b>Hold</b> → <b>Exhale</b> → <b>Hold</b>.
+              Start with 4–4–4–4 and adjust for comfort. Breathe gently—no strain.
+            </p>
+          </fieldset>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div>Tip: If you feel light‑headed, pause and breathe normally.</div>
+    <div>
+      <span class="hint">Made for calm focus</span>
+    </div>
+  </footer>
+</div>
+
+<!-- Screen reader live region -->
+<div id="sr" class="sr-only" aria-live="assertive"></div>
+
+<script>
+(function(){
+  // ---------- Utilities ----------
+  const qs = (s, el=document) => el.querySelector(s);
+  const elPhase = qs('#phase');
+  const elCounter = qs('#counter');
+  const elProgress = qs('.progress');
+  const elBox = qs('#box');
+  const sr = qs('#sr');
+  const btnStart = qs('#start');
+  const btnPause = qs('#pause');
+  const btnReset = qs('#reset');
+  const btnFS = qs('#fs');
+  const tInhale = qs('#tInhale');
+  const tHold1 = qs('#tHold1');
+  const tExhale = qs('#tExhale');
+  const tHold2 = qs('#tHold2');
+  const preset = qs('#preset');
+  const minutes = qs('#minutes');
+  const chkBeep = qs('#beep');
+  const chkHaptics = qs('#haptics');
+  const chkCountdown = qs('#countdown');
+  const chkSpoken = qs('#spoken');
+  const chkLoop = qs('#autoRestart');
+  const themeDark = qs('#themeDark');
+  const themeLight = qs('#themeLight');
+
+  const PHASES = [
+    { key:'inhale',      label:'Inhale', scaleTo:1.12 },
+    { key:'hold-full',   label:'Hold',   scaleTo:1.12 },
+    { key:'exhale',      label:'Exhale', scaleTo:0.92 },
+    { key:'hold-empty',  label:'Hold',   scaleTo:0.92 }
+  ];
+
+  // Audio setup
+  let audioCtx;
+  function beep(duration=0.10, freq=660, type='sine', volume=0.03){
+    if(!chkBeep.checked) return;
+    try {
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type = type; o.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      g.gain.setValueAtTime(0, audioCtx.currentTime);
+      g.gain.linearRampToValueAtTime(volume, audioCtx.currentTime + 0.01);
+      o.start();
+      g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+      o.stop(audioCtx.currentTime + duration);
+    } catch(e){}
+  }
+
+  // Speech
+  function speak(text){
+    if(!chkSpoken.checked) return;
+    try {
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1; u.pitch = 1;
+      speechSynthesis.cancel();
+      speechSynthesis.speak(u);
+    } catch(e){}
+  }
+
+  // Haptics
+  function buzz(){
+    if(!chkHaptics.checked || !('vibrate' in navigator)) return;
+    navigator.vibrate(30);
+  }
+
+  // Fullscreen
+  function toggleFS(){
+    if(!document.fullscreenElement){
+      (document.body.requestFullscreen || document.body.webkitRequestFullscreen || function(){})()
+    } else {
+      (document.exitFullscreen || document.webkitExitFullscreen || function(){})()
+    }
+  }
+
+  // Theme
+  function setTheme(mode){
+    const isLight = mode === 'light';
+    document.body.classList.toggle('light', isLight);
+    themeDark.setAttribute('aria-pressed', String(!isLight));
+    themeLight.setAttribute('aria-pressed', String(isLight));
+    try { localStorage.setItem('boxb-theme', isLight ? 'light':'dark'); } catch(e){}
+  }
+  // Load theme preference
+  (function(){
+    const saved = (localStorage && localStorage.getItem('boxb-theme')) || '';
+    if(saved) setTheme(saved); else if(window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches) setTheme('light');
+  })();
+
+  themeDark.addEventListener('click', ()=>setTheme('dark'));
+  themeLight.addEventListener('click', ()=>setTheme('light'));
+
+  // ---------- State ----------
+  let schedule = [4,4,4,4]; // seconds per phase
+  let totalMs = sum(schedule)*1000;
+  let targetSessionMs = 5 * 60 * 1000; // default 5 minutes
+  let running = false;
+  let paused = false;
+  let rafId = null;
+
+  // Continuous phase tracking
+  let phaseIdx = 0;
+  let phaseStartTime = 0;         // ms since performance.now at the start of current phase
+  let phaseDurationMs = 4000;     // ms for current phase
+  let elapsedInSession = 0;       // ms, accumulates dt per frame
+  let lastTick = 0;
+
+  function sum(arr){ return arr.reduce((a,b)=>a+b,0); }
+
+  function applyTiming(){
+    schedule = [
+      parseFloat(tInhale.value || '4'),
+      parseFloat(tHold1.value || '4'),
+      parseFloat(tExhale.value || '4'),
+      parseFloat(tHold2.value || '4')
+    ].map(v => Math.max(0, v));
+    totalMs = sum(schedule)*1000;
+    targetSessionMs = Math.max(1, parseInt(minutes.value || '5')) * 60 * 1000;
+    // Update current phase duration var for CSS transition
+    phaseDurationMs = (schedule[phaseIdx] || 1) * 1000;
+    elBox.style.setProperty('--phase-ms', `${phaseDurationMs}ms`);
+  }
+
+  // Presets
+  preset.addEventListener('change', ()=>{
+    const val = preset.value;
+    if(val !== 'custom'){
+      const parts = val.split('-').map(Number);
+      [tInhale.value, tHold1.value, tExhale.value, tHold2.value] = parts;
+      applyTiming();
+    }
+  });
+  [tInhale, tHold1, tExhale, tHold2, minutes].forEach(el => {
+    el.addEventListener('change', ()=>{
+      applyTiming();
+      preset.value = 'custom';
+    });
+  });
+
+  // ---------- Rendering ----------
+  function setPhase(idx){
+    phaseIdx = (idx + PHASES.length) % PHASES.length;
+    const phase = PHASES[phaseIdx];
+
+    // Set UI label
+    elPhase.textContent = phase.label + (phase.key==='inhale'?' ↑': phase.key==='exhale'?' ↓':'');
+    sr.textContent = phase.label;
+
+    // Update animation duration and target scale for this phase
+    phaseDurationMs = (schedule[phaseIdx] || 1) * 1000;
+    elBox.style.setProperty('--phase-ms', `${phaseDurationMs}ms`);
+    elBox.style.setProperty('--scale', phase.scaleTo);
+
+    // Guidance cues
+    beep(0.10, phase.key.includes('hold') ? 520 : (phase.key==='inhale' ? 720 : 440));
+    buzz();
+    speak(phase.label);
+  }
+
+  function updateCounter(msLeftPhase){
+    if(chkCountdown.checked){
+      elCounter.textContent = (msLeftPhase/1000).toFixed(1) + 's';
+    } else {
+      const totalLeft = Math.max(0, (targetSessionMs - elapsedInSession)/1000);
+      elCounter.textContent = totalLeft.toFixed(0) + 's left';
+    }
+  }
+
+  function updateProgress(now){
+    // Progress is fraction of the box cycle; compute precise elapsed in the cycle from phaseStartTime
+    const cycleElapsed = (now - phaseStartTime) + schedule.slice(0, phaseIdx).reduce((a,b)=>a+b,0)*1000;
+    const deg = ((cycleElapsed % totalMs) / totalMs) * 360;
+    elProgress.style.setProperty('--deg', `${deg}deg`);
+  }
+
+  function resetVisual(){
+    elBox.style.setProperty('--scale', PHASES[0].scaleTo);
+    elProgress.style.setProperty('--deg', `0deg`);
+    elPhase.textContent = 'Ready';
+    elCounter.textContent = '0.0s';
+  }
+
+  // ---------- Engine ----------
+  function start(){
+    if(running && paused){ // resume
+      paused = false;
+      lastTick = performance.now();
+      tick();
+      return;
+    }
+    // fresh start
+    applyTiming();
+    running = true;
+    paused = false;
+    elapsedInSession = 0;
+    phaseIdx = 0;
+    phaseStartTime = performance.now();
+    setPhase(0); // initializes duration + target scale, beeps, etc.
+    lastTick = phaseStartTime;
+    tick();
+  }
+
+  function pause(){
+    if(!running) return;
+    paused = !paused;
+    if(!paused){
+      // resume precisely from current phase
+      const now = performance.now();
+      // Keep phaseStartTime as if time was frozen during pause
+      lastTick = now;
+      tick();
+    }
+  }
+
+  function stop(resetToReady=true){
+    running = false;
+    paused = false;
+    cancelAnimationFrame(rafId);
+    if(resetToReady) resetVisual();
+  }
+
+  function tick(now){
+    if(!running || paused) return;
+    rafId = requestAnimationFrame(tick);
+
+    now = now || performance.now();
+    const dt = now - lastTick;
+    lastTick = now;
+    elapsedInSession += dt;
+
+    // ----- Continuous phase advancement (no gaps) -----
+    // Advance to the next phase immediately if current one is done (may skip multiple if needed).
+    let elapsedInPhase = now - phaseStartTime;
+    while (elapsedInPhase >= phaseDurationMs && running && !paused){
+      // Move to next phase seamlessly
+      phaseStartTime += phaseDurationMs;                 // the exact boundary time
+      phaseIdx = (phaseIdx + 1) % PHASES.length;
+      setPhase(phaseIdx);                                // updates phaseDurationMs
+      elapsedInPhase = now - phaseStartTime;             // recompute for possible multiple hops
+    }
+
+    const msLeftPhase = Math.max(0, phaseDurationMs - elapsedInPhase);
+    updateCounter(msLeftPhase);
+    updateProgress(now);
+
+    // Session end
+    if(elapsedInSession >= targetSessionMs){
+      if(chkLoop.checked){
+        // restart session without any pause
+        const carry = Math.max(0, elapsedInSession - targetSessionMs);
+        elapsedInSession = 0;
+        // keep current phase & timings, just continue seamlessly
+        // (Optional) brief chime
+        beep(0.14, 880);
+        speak('New session');
+        // fake lastTick so we account for carry next frame naturally
+        lastTick = now - carry;
+      } else {
+        stop(false);
+        elPhase.textContent = 'Complete';
+        elCounter.textContent = 'Nice work';
+        beep(0.18, 880);
+        speak('Session complete');
+      }
+    }
+  }
+
+  // ---------- Events ----------
+  btnStart.addEventListener('click', start);
+  btnPause.addEventListener('click', pause);
+  btnReset.addEventListener('click', ()=>stop(true));
+  btnFS.addEventListener('click', toggleFS);
+
+  // Keyboard
+  window.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space'){ e.preventDefault(); if(!running) start(); else pause(); }
+    if(e.key === 'r' || e.key === 'R'){ stop(true); }
+    if(e.key === 'f' || e.key === 'F'){ toggleFS(); }
+  });
+
+  // Initialize visual state
+  resetVisual();
+})();
+</script>
 </body>
 </html>
